@@ -1,0 +1,7 @@
+{
+  "name": "stripe-implementation",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
