@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { loadStripe, Stripe, StripeElements } from '@stripe/stripe-js';
+import { environment } from '../../../environments/environment.local';
 
 @Component({
   selector: 'app-stripe',
@@ -12,7 +13,7 @@ export class StripePage implements OnInit {
   elements: StripeElements | null = null;
 
   async ngOnInit() {
-    //this.stripe = await loadStripe('pk_test'); // insert public key
+    this.stripe = await loadStripe(environment.publicKey); // insert public key
 
     if (!this.stripe) {
       console.error('Stripe failed to load');
