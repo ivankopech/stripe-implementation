@@ -1,10 +1,11 @@
-require("dotenv").config();
+require("dotenv").config({ path: "../../../.env" });
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const Stripe = require("stripe");
 
 const app = express();
+console.log("Stripe Secret Key:", process.env.SECRET_KEY);
 const stripe = Stripe(process.env.SECRET_KEY);
 
 app.use(cors({ origin: "http://localhost:8100" })); // Ionic default port
