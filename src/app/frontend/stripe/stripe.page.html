@@ -1,22 +1,21 @@
 <ion-header [translucent]="true">
   <ion-toolbar>
-    <ion-title> Pay with Stripe </ion-title>
+    <ion-title>Pay with Stripe</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <h2>Enter your card info</h2>
-  <div id="card-element" style="margin-bottom: 16px"></div>
+  <div class="payment-container">
+    <h2>Enter your card info</h2>
 
-  <ion-button expand="block" (click)="handleDummyPayment()">Submit</ion-button>
+    <form (submit)="handlePayment($event)">
+      <label for="card-element">Card Details</label>
+      <div id="card-element"></div>
+      <div id="card-errors" class="error-message"></div>
+
+      <ion-button expand="block" type="submit" [disabled]="isProcessing">
+        {{ isProcessing ? 'Processing...' : 'Submit Payment' }}
+      </ion-button>
+    </form>
+  </div>
 </ion-content>
-
-<!-- <ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Pay with Stripe</ion-title>
-    </ion-toolbar>
-  </ion-header>
-
-  <app-explore-container name="Pay with Stripe"></app-explore-container>
-</ion-content> -->
