@@ -33,6 +33,16 @@ app.post("/create-subscription", async (req, res) => {
     });
 
     const paymentIntent = subscription.latest_invoice?.payment_intent;
+    const invoice = subscription.latest_invoice;
+
+    if (invoice.status == "paid") {
+      return res.send({
+        subscriptionId: subscription.id,
+        clientSecret: null,
+        invoiceStatus: invoice.status,
+        message: "Subscription successful. No confirmation needed.",
+      });
+    }
 
     if (!paymentIntent) {
       return res.status(400).send({
@@ -45,6 +55,7 @@ app.post("/create-subscription", async (req, res) => {
     return res.send({
       subscriptionId: subscription.id,
       clientSecret: paymentIntent.client_secret,
+      invoiceStatus: invoice.status,
     });
   } catch (err) {
     console.error("Subscription Error:", err);

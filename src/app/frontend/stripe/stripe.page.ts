@@ -67,6 +67,25 @@ export class StripePage implements OnInit {
     });
 
     const result = await response.json();
+    if (!result.clientSecret) {
+      if (result.invoiceStatus == 'paid') {
+        alert('✅ Suscription generated successfully.');
+      } else {
+        alert('No se pudo completar el pago.');
+      }
+      return;
+    }
+
+    const { error: confirmError } = await this.stripe.confirmCardPayment(
+      result.clientSecret
+    );
+
+    if (confirmError) {
+      alert(confirmError.message ?? 'Error al confirmar el pago');
+    } else {
+      alert('✅ Suscripción confirmada con éxito!');
+    }
+
     if (result.error) {
       document.getElementById('card-errors')!.textContent =
         result.error.message;
