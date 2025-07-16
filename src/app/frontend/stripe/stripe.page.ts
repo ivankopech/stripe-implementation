@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { loadStripe, Stripe, StripeElements } from '@stripe/stripe-js';
 import { environment } from '../../../environments/environment.local';
+import { AlertController, NavController } from '@ionic/angular';
 
 @Component({
   selector: 'app-stripe',
@@ -12,6 +13,11 @@ export class StripePage implements OnInit {
   stripe: Stripe | null = null;
   elements: StripeElements | null = null;
   isProcessing = false;
+
+  constructor(
+    private alertController: AlertController,
+    private navController: NavController
+  ) {}
 
   async ngOnInit() {
     this.stripe = await loadStripe(environment.publicKey);
@@ -34,74 +40,95 @@ export class StripePage implements OnInit {
     }
 
     this.isProcessing = true;
-    const cardElement = this.elements.getElement('card');
-    if (!cardElement) {
-      console.error('Card element not found');
-      this.isProcessing = false;
-      return;
-    }
+    try {
+      const cardElement = this.elements.getElement('card');
+      if (!cardElement) throw new Error('Card element not found');
 
-    const { paymentMethod, error } = await this.stripe.createPaymentMethod({
-      type: 'card',
-      card: cardElement,
-    });
+      const { paymentMethod, error } = await this.stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+      });
 
-    if (error) {
-      const errorElement = document.getElementById('card-errors');
-      if (errorElement) {
-        errorElement.textContent = error.message ?? 'An unknown error ocurred';
+      if (error) {
+        await this.presentAlert(
+          'Error',
+          error.message ?? 'Payment method error'
+        );
+        return;
       }
-      this.isProcessing = false;
-      return;
-    }
 
-    // Enviar el paymentMethod.id al backend
-    const response = await fetch('http://localhost:3000/create-subscription', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: 'ivankopech@gmail.com', // Puedes obtenerlo dinámicamente
-        paymentMethodId: paymentMethod.id,
-        priceId: 'price_1RbRn4H1k22o1btLpMrELLGC', // Reemplazar con el ID de precio correcto
-      }),
-    });
+      // Enviar el paymentMethod.id al backend
+      const response = await fetch(
+        'http://localhost:3000/create-subscription',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: 'ivankopech@gmail.com', // Puedes obtenerlo dinámicamente
+            paymentMethodId: paymentMethod.id,
+            priceId: 'price_1RbRn4H1k22o1btLpMrELLGC', // Reemplazar con el ID de precio correcto
+          }),
+        }
+      );
+      const result = await response.json();
 
-    const result = await response.json();
-    if (!result.clientSecret) {
-      if (result.invoiceStatus == 'paid') {
-        alert('✅ Suscription generated successfully.');
-      } else {
-        alert('No se pudo completar el pago.');
+      console.log('backend result: ', result);
+
+      if (result.error) {
+        await this.presentAlert('Error', result.error.message);
+        return;
       }
-      return;
-    }
 
-    const { error: confirmError } = await this.stripe.confirmCardPayment(
-      result.clientSecret
-    );
+      if (!result.clientSecret) {
+        if (result.invoiceStatus === 'paid') {
+          await this.presentAlert(
+            'Exito',
+            '✅ Suscription generated successfully.'
+          );
+          this.navController.back();
+          return;
+        } else {
+          await this.presentAlert('Error', 'Could not complete payment');
+          return;
+        }
+      }
 
-    if (confirmError) {
-      alert(confirmError.message ?? 'Error al confirmar el pago');
-    } else {
-      alert('✅ Suscripción confirmada con éxito!');
-    }
+      if (!result.clientSecret || typeof result.clientSecret !== 'string') {
+        await this.presentAlert('Error', 'invalid client secret');
+        return;
+      }
 
-    if (result.error) {
-      document.getElementById('card-errors')!.textContent =
-        result.error.message;
-    } else {
+      console.log('client secret:', result.clientSecret);
+
       const { error: confirmError } = await this.stripe.confirmCardPayment(
         result.clientSecret
       );
 
       if (confirmError) {
-        document.getElementById('card-errors')!.textContent =
-          confirmError.message ?? 'Confirmation failed';
+        await this.presentAlert(
+          'Error',
+          confirmError.message ?? 'Error while confirming payment'
+        );
       } else {
-        alert('✅ Subscription started successfully!');
+        await this.presentAlert('Error', '✅ Suscription confirmed');
+        this.navController.back();
       }
+    } catch (err: any) {
+      await this.presentAlert(
+        'Error',
+        err.message ?? 'An unexpected error ocurred'
+      );
+    } finally {
+      this.isProcessing = false;
     }
+  }
 
-    this.isProcessing = false;
+  async presentAlert(header: string, message: string) {
+    const alert = await this.alertController.create({
+      header,
+      message,
+      buttons: ['OK'],
+    });
+    await alert.present();
   }
 }
