@@ -7,7 +7,15 @@ const Stripe = require("stripe");
 const app = express();
 const stripe = Stripe(process.env.SECRET_KEY);
 
-app.use(cors({ origin: "http://localhost:8100" })); // Ionic default port
+app.use(
+  cors({
+    origin: [
+      "capacitor://localhost",
+      "http://localhost:3000",
+      "http://localhost",
+    ],
+  })
+); // Ionic default port
 app.use(bodyParser.json());
 
 app.post("/create-subscription", async (req, res) => {
@@ -51,6 +59,9 @@ app.post("/create-subscription", async (req, res) => {
         },
       });
     }
+
+    console.log("Payment intent: ", paymentIntent);
+    console.log("client secret: ", paymentIntent?.client_secret);
 
     return res.send({
       subscriptionId: subscription.id,
